@@ -527,8 +527,16 @@ def get_customer_complaints(customer_id: int):
             JOIN PRIORITY p
                 ON p.priority_id = c.priority_id
             LEFT JOIN COMPLAINT_ASSIGNMENT ca
-                ON ca.complaint_id = c.complaint_id
-                AND ca.assignment_status = 'Active'
+                -- Show the current assignment, or the most recent completed one,
+                -- so resolved complaints still display the agent who handled them.
+                ON ca.assignment_id = (
+                    SELECT ca2.assignment_id
+                    FROM COMPLAINT_ASSIGNMENT ca2
+                    WHERE ca2.complaint_id = c.complaint_id
+                    ORDER BY (ca2.assignment_status = 'Active') DESC,
+                             ca2.assigned_at DESC
+                    LIMIT 1
+                )
             LEFT JOIN SUPPORT_AGENT sa
                 ON sa.agent_id = ca.agent_id
             LEFT JOIN SUPPORT_DEPARTMENT sd
